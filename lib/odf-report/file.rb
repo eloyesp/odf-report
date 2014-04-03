@@ -1,3 +1,5 @@
+require 'tempfile'
+
 module ODFReport
 
   class File
@@ -47,23 +49,29 @@ module ODFReport
 
       Zip::ZipFile.open(@path) do |z|
 
-        cont = "#{@tmp_dir}/#{content_file}"
+        z.glob("**/" + content_file).each do |ziped_file|
 
-        z.extract(content_file, cont)
+          # cont = "#{@tmp_dir}/#{ ziped_file }"
+          # require 'pry'
+          # binding.pry
 
-        txt = ''
+          cont = Dir::Tmpname.make_tmpname(content_file, rand(99999))
+          z.extract(ziped_file, cont)
 
-        ::File.open(cont, "r") do |f|
-          txt = f.read
+          txt = ''
+
+          ::File.open(cont, "r") do |f|
+            txt = f.read
+          end
+
+          yield(txt)
+
+          ::File.open(cont, "w") do |f|
+            f.write(txt)
+          end
+
+          z.replace(ziped_file, cont)
         end
-
-        yield(txt)
-
-        ::File.open(cont, "w") do |f|
-           f.write(txt)
-        end
-
-        z.replace(content_file, cont)
       end
 
     end
